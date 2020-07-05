@@ -26,8 +26,6 @@
         "no-this-before-super": "warn",
         "no-undef": "warn",
         "no-unreachable": "warn",
-        "no-unused-vars": "warn",
-        "semi": "warn",
         "semi-spacing": "warn",
         "constructor-super": "warn",
         "valid-typeof": "warn",
@@ -36,6 +34,7 @@
         "brace-style": "warn",
         "camelcase": "warn",
         "no-fallthrough": "warn",
-        "@typescript-eslint/no-var-requires": "off"
+        "@typescript-eslint/semi": "warn",
+        "@typescript-eslint/no-explicit-any": "off"
     }
 }
