@@ -156,7 +156,7 @@ export default class PluginLoader3 extends EventEmitter2 {
     private storageDir: string;
     private apiVersion: string;
     private fileExtension: string;
-    private parent: PluginLoader3 | undefined;
+    private parent: PluginLoader3 | null;
     private dependencyTree: {
         [key: string]: {
             [key: string]: string
@@ -188,10 +188,10 @@ export default class PluginLoader3 extends EventEmitter2 {
     private startedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
     private stoppedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
     private unloadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
-    private parentLoadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | undefined;
-    private parentStartedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | undefined;
-    private parentStoppedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | undefined;
-    private parentUnloadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | undefined;
+    private parentLoadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
+    private parentStartedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
+    private parentStoppedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
+    private parentUnloadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
 
     constructor(options: PluginLoaderConstructorArgs) {
         super(options.eventEmitterOptions || {});
@@ -203,7 +203,7 @@ export default class PluginLoader3 extends EventEmitter2 {
 
         this.apiVersion = options.apiVersion;
         this.fileExtension = (options.fileExtension || ".plugin").toLowerCase();
-        this.parent = options.parentPluginLoader;
+        this.parent = options.parentPluginLoader || null;
 
         this.api = options.api;
 
@@ -346,11 +346,22 @@ export default class PluginLoader3 extends EventEmitter2 {
                 this.parent.on("pluginStopped", this.parentStoppedListener);
             if (this.parentUnloadedListener)
                 this.parent.on("pluginUnloaded", this.parentUnloadedListener);
+
+            this.parent.on("pluginLoaderDestroy", () => {
+                this.parent = null;
+                this.parentLoadedListener = null;
+                this.parentStartedListener = null;
+                this.parentStoppedListener = null;
+                this.parentUnloadedListener = null;
+            });
         }
 
     }
 
-    destroy(): void {
+    async destroy(): Promise<void> {
+        await Promise.all(this.getStartedPlugins(false).map(plugin => this.stopPlugin(plugin)));
+        await Promise.all(this.getLoadedPlugins(false).map(plugin => this.unloadPlugin(plugin)));
+
         if (this.parent) {
             if (this.parentLoadedListener)
                 this.parent.removeListener("pluginLoaded", this.parentLoadedListener);
@@ -362,8 +373,12 @@ export default class PluginLoader3 extends EventEmitter2 {
                 this.parent.removeListener("pluginUnloaded", this.parentUnloadedListener);
         }
 
+        this.emit("pluginLoaderDestroy");
+
         this.removeAllListeners();
         this.emitter.removeAllListeners();
+
+        this.storage.__destroy();
     }
 
     async listPlugins(includeParent = true): Promise<string[]> {
