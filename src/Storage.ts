@@ -5,15 +5,15 @@ import BetterSQLite3 from "better-sqlite3";
 const VALUE_STORAGE_TABLE = "__STORAGE";
 const META_STORAGE_TABLE = "__META";
 
-type jsonSerializable = string | number | {
-    [key: string]: jsonSerializable
-} | jsonSerializable[] | boolean | null;
-type storageOptions = {
+type JsonSerializable = string | number | {
+    [key: string]: JsonSerializable
+} | JsonSerializable[] | boolean | null;
+type StorageOptions = {
     path: string,
     databaseLog?: (message: any, ...additionalArgs: any[]) => void,
     destructorPassword?: string,
     metaTable?: {
-        [key: string]: jsonSerializable
+        [key: string]: JsonSerializable
     }
 };
 
@@ -30,15 +30,15 @@ export default class Storage {
     private destructorPassword: string | undefined;
 
     private keyFn: (index: number) => string | null;
-    private entriesFn: () => [string, jsonSerializable | undefined][];
+    private entriesFn: () => [string, JsonSerializable | undefined][];
     private keysFn: () => string[];
-    private valuesFn: () => (jsonSerializable | undefined)[];
-    private getFn: (key: string) => jsonSerializable | undefined;
-    private setFn: (key: string, value: jsonSerializable) => void;
+    private valuesFn: () => (JsonSerializable | undefined)[];
+    private getFn: (key: string) => JsonSerializable | undefined;
+    private setFn: (key: string, value: JsonSerializable) => void;
     private removeFn: (key: string) => void;
     private clearFn: () => void;
 
-    constructor(pathOrOptions: storageOptions | string) {
+    constructor(pathOrOptions: StorageOptions | string) {
         this.dbFilePath = typeof pathOrOptions === "string" ? pathOrOptions : pathOrOptions.path;
         const verbose = typeof pathOrOptions !== "string" && pathOrOptions.databaseLog ? pathOrOptions.databaseLog : undefined;
         const db = this.db = new BetterSQLite3(this.dbFilePath, {
@@ -164,24 +164,24 @@ export default class Storage {
     get length(): number {
         return this.keysFn().length;
     }
-    get entries(): [string, jsonSerializable | undefined][] {
+    get entries(): [string, JsonSerializable | undefined][] {
         return this.entriesFn();
     }
     get keys(): string[] {
         return this.keysFn();
     }
-    get values(): (jsonSerializable | undefined)[] {
+    get values(): (JsonSerializable | undefined)[] {
         return this.valuesFn();
     }
     key(index: number): string | null {
         return this.keyFn(index);
     }
-    getItem(keyName: string, defaultValue?: jsonSerializable): jsonSerializable | undefined {
+    getItem(keyName: string, defaultValue?: JsonSerializable): JsonSerializable | undefined {
         const item = this.getFn(keyName);
         if (typeof item !== "undefined") return item;
         return defaultValue;
     }
-    setItem(keyName: string, keyValue: jsonSerializable): void {
+    setItem(keyName: string, keyValue: JsonSerializable): void {
         this.setFn(keyName, keyValue);
     }
     removeItem(keyName: string): void {
