@@ -16,6 +16,12 @@ klaw(process.argv[2], {
 })
     .on("data", async item => {
         if (item.stats.isFile()) {
+            if (![
+                ".js",
+                ".ts",
+                ".mjs",
+                ".cjs"
+            ].includes(path.parse(item.path).ext.toLowerCase())) return;
             const rl = readline.createInterface({
                 input: fs.createReadStream(item.path),
                 output: outstream,
