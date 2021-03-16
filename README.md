@@ -25,7 +25,9 @@ Then clone this repository, open a terminal/command prompt and type `npm i` to i
 
 ## Scripts
 Execute the scripts with `npm run <script>`
-- `test` - Checks for remaining `TODO:` in the source files and warns the user
+- `find-todo` - Finds remaining `TODO:` in the code and warns the developer that there are still things that are unfinished
+- `mocha` - Runs the unit tests in the `/test` directory
 - `lint` - Runs `eslint` and checks for code styling problems
 - `build` - Compile the TypeScript Source to `dist/`
+- `test` - Runs `lint`, `find-todo` and `mocha` in order
 - `start` - Run `test` and `build`, then try and execute the `main.js` in the root which serves as entrypoint and exposes the Components
