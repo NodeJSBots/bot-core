@@ -170,6 +170,9 @@ export default class PluginLoader3 extends EventEmitter2 {
         [key: string]: any
     };
     private storage: Storage;
+    private pluginStorages: {
+        [key: string]: Storage
+    } = {};
 
     private loadedPlugins: {
         [key: string]: Plugin
@@ -539,7 +542,7 @@ export default class PluginLoader3 extends EventEmitter2 {
 
         await injectDependencies(pluginInfo.dependencies || {});
 
-        const storage = new Storage({
+        const storage = this.pluginStorages[resolved] = new Storage({
             path: resolve(this.storageDir, "plugins", parse(resolved).name + ".sqlite3"),
             metaTable: {
                 Module: pluginInfo.name,
@@ -569,7 +572,10 @@ export default class PluginLoader3 extends EventEmitter2 {
 
         if (typeof plugin.unload === "function") await plugin.unload();
 
+        this.pluginStorages[resolved].__destroy();
+
         delete this.loadedPlugins[resolved];
+        delete this.pluginStorages[resolved];
 
         setTimeout(() => {
             this.emit("pluginUnloaded", resolved, {
