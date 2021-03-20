@@ -25,27 +25,27 @@ export default class Storage {
         return META_STORAGE_TABLE;
     }
 
-    private dbFilePath: string;
-    private db: BetterSQLite3.Database;
-    private destructorPassword: string | undefined;
+    #dbFilePath: string;
+    #db: BetterSQLite3.Database;
+    #destructorPassword: string | undefined;
 
-    private keyFn: (index: number) => string | null;
-    private entriesFn: () => [string, JsonSerializable | undefined][];
-    private keysFn: () => string[];
-    private valuesFn: () => (JsonSerializable | undefined)[];
-    private getFn: (key: string) => JsonSerializable | undefined;
-    private setFn: (key: string, value: JsonSerializable) => void;
-    private removeFn: (key: string) => void;
-    private clearFn: () => void;
+    #keyFn: (index: number) => string | null;
+    #entriesFn: () => [string, JsonSerializable | undefined][];
+    #keysFn: () => string[];
+    #valuesFn: () => (JsonSerializable | undefined)[];
+    #getFn: (key: string) => JsonSerializable | undefined;
+    #setFn: (key: string, value: JsonSerializable) => void;
+    #removeFn: (key: string) => void;
+    #clearFn: () => void;
 
     constructor(pathOrOptions: StorageOptions | string) {
-        this.dbFilePath = typeof pathOrOptions === "string" ? pathOrOptions : pathOrOptions.path;
+        this.#dbFilePath = typeof pathOrOptions === "string" ? pathOrOptions : pathOrOptions.path;
         const verbose = typeof pathOrOptions !== "string" && pathOrOptions.databaseLog ? pathOrOptions.databaseLog : undefined;
-        const db = this.db = new BetterSQLite3(this.dbFilePath, {
+        const db = this.#db = new BetterSQLite3(this.#dbFilePath, {
             verbose
         });
 
-        this.destructorPassword = typeof pathOrOptions !== "string" ? pathOrOptions.destructorPassword : undefined;
+        this.#destructorPassword = typeof pathOrOptions !== "string" ? pathOrOptions.destructorPassword : undefined;
 
         db.pragma("journal_mode = WAL");
 
@@ -100,11 +100,11 @@ export default class Storage {
                 }
             })();
 
-        this.keyFn = (index) => {
-            const rows = this.keysFn();
+        this.#keyFn = (index) => {
+            const rows = this.#keysFn();
             return rows[index] || null;
         };
-        this.entriesFn = () => {
+        this.#entriesFn = () => {
             const rows: {
                 key: string,
                 value: string
@@ -117,15 +117,15 @@ export default class Storage {
                 }
             });
         };
-        this.keysFn = () => {
-            const rows = this.entriesFn();
+        this.#keysFn = () => {
+            const rows = this.#entriesFn();
             return rows.map(row => row[0]);
         };
-        this.valuesFn = () => {
-            const rows = this.entriesFn();
+        this.#valuesFn = () => {
+            const rows = this.#entriesFn();
             return rows.map(row => row[1]);
         };
-        this.getFn = (key) => {
+        this.#getFn = (key) => {
             const row = getStmt.get({
                 table: VALUE_STORAGE_TABLE,
                 key
@@ -137,68 +137,68 @@ export default class Storage {
                 return undefined;
             }
         };
-        this.setFn = (key, value) => {
+        this.#setFn = (key, value) => {
             setValueStmt.run({
                 key,
                 value: JSON.stringify(value)
             });
         };
-        this.removeFn = (key) => {
+        this.#removeFn = (key) => {
             removeStmt.run({
                 table: VALUE_STORAGE_TABLE,
                 key
             });
         };
-        this.clearFn = () => {
+        this.#clearFn = () => {
             clearStmt.run({
                 table: VALUE_STORAGE_TABLE
             });
         };
     }
     __destroy(password?: string): void {
-        if (this.destructorPassword && password !== this.destructorPassword) return;
-        this.db.close();
+        if (this.#destructorPassword && password !== this.#destructorPassword) return;
+        this.#db.close();
     }
 
     /* localStorage Interface */
     get length(): number {
-        return this.keysFn().length;
+        return this.#keysFn().length;
     }
     get entries(): [string, JsonSerializable | undefined][] {
-        return this.entriesFn();
+        return this.#entriesFn();
     }
     get keys(): string[] {
-        return this.keysFn();
+        return this.#keysFn();
     }
     get values(): (JsonSerializable | undefined)[] {
-        return this.valuesFn();
+        return this.#valuesFn();
     }
     key(index: number): string | null {
-        return this.keyFn(index);
+        return this.#keyFn(index);
     }
     getItem(keyName: string, defaultValue?: JsonSerializable): JsonSerializable | undefined {
-        const item = this.getFn(keyName);
+        const item = this.#getFn(keyName);
         if (typeof item !== "undefined") return item;
         return defaultValue;
     }
     setItem(keyName: string, keyValue: JsonSerializable): void {
-        this.setFn(keyName, keyValue);
+        this.#setFn(keyName, keyValue);
     }
     removeItem(keyName: string): void {
-        this.removeFn(keyName);
+        this.#removeFn(keyName);
     }
     clear(): void {
-        this.clearFn();
+        this.#clearFn();
     }
 
     /* SQLite Interface */
     prepare(source: string): BetterSQLite3.Statement {
-        return this.db.prepare(source);
+        return this.#db.prepare(source);
     }
     transaction(fn: (...args: any[]) => void): BetterSQLite3.Transaction {
-        return this.db.transaction(fn);
+        return this.#db.transaction(fn);
     }
     exec(query: string): BetterSQLite3.Database {
-        return this.db.exec(query);
+        return this.#db.exec(query);
     }
 }
