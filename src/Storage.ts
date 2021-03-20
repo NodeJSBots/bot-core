@@ -176,7 +176,7 @@ export default class Storage {
     key(index: number): string | null {
         return this.#keyFn(index);
     }
-    getItem(keyName: string, defaultValue?: JsonSerializable): JsonSerializable | undefined {
+    getItem(keyName: string, defaultValue: JsonSerializable = null): JsonSerializable | undefined {
         const item = this.#getFn(keyName);
         if (typeof item !== "undefined") return item;
         return defaultValue;
