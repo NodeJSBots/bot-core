@@ -152,76 +152,76 @@ export default class PluginLoader3 extends EventEmitter2 {
         return "3.0.0";
     }
 
-    private pluginDir: string;
-    private storageDir: string;
-    private apiVersion: string;
-    private fileExtension: string;
-    private parent: PluginLoader3 | null;
-    private dependencyTree: {
+    #pluginDir: string;
+    #storageDir: string;
+    #apiVersion: string;
+    #fileExtension: string;
+    #parent: PluginLoader3 | null;
+    #dependencyTree: {
         [key: string]: {
             [key: string]: string
         }
     } = {};
-    private resolverTable: {
+    #resolverTable: {
         [key: string]: string
     } = {};
 
-    private api: {
+    #api: {
         [key: string]: any
     };
-    private storage: Storage;
-    private pluginStorages: {
+    #storage: Storage;
+    #pluginStorages: {
         [key: string]: Storage
     } = {};
 
-    private loadedPlugins: {
+    #loadedPlugins: {
         [key: string]: Plugin
     } = {};
-    private startedPlugins: {
+    #startedPlugins: {
         [key: string]: Plugin
     } = {};
 
-    private loadingQueue: {
+    #loadingQueue: {
         plugin: string,
         callback: () => void
     }[] = [];
-    private emitter: EventEmitter2;
+    #emitter: EventEmitter2;
 
-    private loadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
-    private startedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
-    private stoppedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
-    private unloadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
-    private parentLoadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
-    private parentStartedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
-    private parentStoppedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
-    private parentUnloadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
+    #loadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
+    #startedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
+    #stoppedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
+    #unloadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void);
+    #parentLoadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
+    #parentStartedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
+    #parentStoppedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
+    #parentUnloadedListener: ((resolvedFilename: string, data: PluginLoaderEventData) => void) | null | undefined;
 
     constructor(options: PluginLoaderConstructorArgs) {
         super(options.eventEmitterOptions || {});
         if (!options.baseDir && !(!options.storageDir || !options.pluginDir))
             throw new Error("Directory for plugins/storage missing. Either set a baseDir or storageDir and pluginDir");
 
-        this.storageDir = options.storageDir || resolve(options.baseDir || process.cwd(), "storage");
-        this.pluginDir = options.pluginDir || resolve(options.baseDir || process.cwd(), "plugins");
+        this.#storageDir = options.storageDir || resolve(options.baseDir || process.cwd(), "storage");
+        this.#pluginDir = options.pluginDir || resolve(options.baseDir || process.cwd(), "plugins");
 
-        this.apiVersion = options.apiVersion;
-        this.fileExtension = (options.fileExtension || ".plugin").toLowerCase();
-        this.parent = options.parentPluginLoader || null;
+        this.#apiVersion = options.apiVersion;
+        this.#fileExtension = (options.fileExtension || ".plugin").toLowerCase();
+        this.#parent = options.parentPluginLoader || null;
 
-        this.api = options.api;
+        this.#api = options.api;
 
-        fs.mkdirpSync(resolve(this.storageDir, "plugins"));
-        fs.mkdirpSync(this.pluginDir);
+        fs.mkdirpSync(resolve(this.#storageDir, "plugins"));
+        fs.mkdirpSync(this.#pluginDir);
 
-        this.storage = options.storage || new Storage({
-            path: resolve(this.storageDir, "pluginmanager.sqlite3"),
+        this.#storage = options.storage || new Storage({
+            path: resolve(this.#storageDir, "pluginmanager.sqlite3"),
             metaTable: {
                 Module: "PluginLoader",
                 Version: PluginLoader3.VERSION
             }
         });
 
-        this.emitter = new EventEmitter2(options.eventEmitterOptions || {});
+        this.#emitter = new EventEmitter2(options.eventEmitterOptions || {});
 
         const definePMAPI = options.definePluginManagerAPI === undefined ? true : options.definePluginManagerAPI;
         if (definePMAPI) {
@@ -272,17 +272,17 @@ export default class PluginLoader3 extends EventEmitter2 {
                 getLoadedPlugins: (includeParent = true) => this.getLoadedPlugins(includeParent),
                 isPluginStarted: (fileID, includeParent = true) => this.isPluginStarted(fileID, includeParent),
                 getStartedPlugins: (includeParent = true) => this.getStartedPlugins(includeParent),
-                events: this.emitter
+                events: this.#emitter
             };
 
             Object.freeze(PM2API);
 
-            if (typeof definePMAPI === "string") this.api[definePMAPI] = PM2API;
-            else this.api.pluginManager = PM2API;
+            if (typeof definePMAPI === "string") this.#api[definePMAPI] = PM2API;
+            else this.#api.pluginManager = PM2API;
         }
 
-        this.loadedListener = this.startedListener = () => {
-            this.loadingQueue.forEach(async queueEntry => {
+        this.#loadedListener = this.#startedListener = () => {
+            this.#loadingQueue.forEach(async queueEntry => {
                 try {
                     if (await this.allDependenciesSatisfied(queueEntry.plugin))
                         queueEntry.callback();
@@ -291,8 +291,8 @@ export default class PluginLoader3 extends EventEmitter2 {
                 }
             });
         };
-        this.unloadedListener = this.stoppedListener = async (filename) => {
-            const depTree = this.dependencyTree;
+        this.#unloadedListener = this.#stoppedListener = async (filename) => {
+            const depTree = this.#dependencyTree;
             const isUnloaded = !this.isPluginLoaded(filename);
             await Promise.all(Object.entries(depTree[filename]).map(async ([dependant, state]) => {
                 const pInfo = await this.getPluginInfo(dependant, false);
@@ -311,51 +311,47 @@ export default class PluginLoader3 extends EventEmitter2 {
             if (isUnloaded) delete depTree[filename];
         };
 
-        this.on("pluginLoaded", this.loadedListener);
-        this.on("pluginStarted", this.startedListener);
-        this.on("pluginStopped", this.stoppedListener);
-        this.on("pluginUnloaded", this.unloadedListener);
+        this.on("pluginLoaded", this.#loadedListener);
+        this.on("pluginStarted", this.#startedListener);
+        this.on("pluginStopped", this.#stoppedListener);
+        this.on("pluginUnloaded", this.#unloadedListener);
 
-        if (this.parent) {
-            this.parentLoadedListener = (filename, { pluginInfo }) => {
+        if (this.#parent) {
+            this.#parentLoadedListener = (filename, { pluginInfo }) => {
                 this.emit("pluginLoaded", filename, {
                     parent: true,
                     pluginInfo
                 });
             };
-            this.parentStartedListener = (filename, { pluginInfo }) => {
+            this.#parentStartedListener = (filename, { pluginInfo }) => {
                 this.emit("pluginStarted", filename, {
                     parent: true,
                     pluginInfo
                 });
             };
-            this.parentStoppedListener = (filename, { pluginInfo }) => {
+            this.#parentStoppedListener = (filename, { pluginInfo }) => {
                 this.emit("pluginStopped", filename, {
                     parent: true,
                     pluginInfo
                 });
             };
-            this.parentUnloadedListener = (filename, { pluginInfo }) => {
+            this.#parentUnloadedListener = (filename, { pluginInfo }) => {
                 this.emit("pluginUnloaded", filename, {
                     parent: true,
                     pluginInfo
                 });
             };
-            if (this.parentLoadedListener)
-                this.parent.on("pluginLoaded", this.parentLoadedListener);
-            if (this.parentStartedListener)
-                this.parent.on("pluginStarted", this.parentStartedListener);
-            if (this.parentStoppedListener)
-                this.parent.on("pluginStopped", this.parentStoppedListener);
-            if (this.parentUnloadedListener)
-                this.parent.on("pluginUnloaded", this.parentUnloadedListener);
+            this.#parent.on("pluginLoaded", this.#parentLoadedListener);
+            this.#parent.on("pluginStarted", this.#parentStartedListener);
+            this.#parent.on("pluginStopped", this.#parentStoppedListener);
+            this.#parent.on("pluginUnloaded", this.#parentUnloadedListener);
 
-            this.parent.on("pluginLoaderDestroy", () => {
-                this.parent = null;
-                this.parentLoadedListener = null;
-                this.parentStartedListener = null;
-                this.parentStoppedListener = null;
-                this.parentUnloadedListener = null;
+            this.#parent.once("pluginLoaderDestroy", () => {
+                this.#parent = null;
+                this.#parentLoadedListener = null;
+                this.#parentStartedListener = null;
+                this.#parentStoppedListener = null;
+                this.#parentUnloadedListener = null;
             });
         }
 
@@ -365,59 +361,59 @@ export default class PluginLoader3 extends EventEmitter2 {
         await Promise.all(this.getStartedPlugins(false).map(plugin => this.stopPlugin(plugin)));
         await Promise.all(this.getLoadedPlugins(false).map(plugin => this.unloadPlugin(plugin)));
 
-        if (this.parent) {
-            if (this.parentLoadedListener)
-                this.parent.removeListener("pluginLoaded", this.parentLoadedListener);
-            if (this.parentStartedListener)
-                this.parent.removeListener("pluginStarted", this.parentStartedListener);
-            if (this.parentStoppedListener)
-                this.parent.removeListener("pluginStopped", this.parentStoppedListener);
-            if (this.parentUnloadedListener)
-                this.parent.removeListener("pluginUnloaded", this.parentUnloadedListener);
+        if (this.#parent) {
+            if (this.#parentLoadedListener)
+                this.#parent.removeListener("pluginLoaded", this.#parentLoadedListener);
+            if (this.#parentStartedListener)
+                this.#parent.removeListener("pluginStarted", this.#parentStartedListener);
+            if (this.#parentStoppedListener)
+                this.#parent.removeListener("pluginStopped", this.#parentStoppedListener);
+            if (this.#parentUnloadedListener)
+                this.#parent.removeListener("pluginUnloaded", this.#parentUnloadedListener);
         }
 
         this.emit("pluginLoaderDestroy");
 
         this.removeAllListeners();
-        this.emitter.removeAllListeners();
+        this.#emitter.removeAllListeners();
 
-        this.storage.__destroy();
+        this.#storage.__destroy();
     }
 
     async listPlugins(includeParent = true): Promise<string[]> {
-        const files = await fs.readdir(this.pluginDir);
+        const files = await fs.readdir(this.#pluginDir);
         const pluginFiles = files.filter(file => {
             const matched = file.match(/(.*)\.(?:ts|js)$/i);
             if (!matched) return false;
-            return matched[1].toLowerCase().endsWith(this.fileExtension.toLowerCase());
+            return matched[1].toLowerCase().endsWith(this.#fileExtension.toLowerCase());
         });
-        if (this.parent && includeParent) pluginFiles.concat(await this.parent.listPlugins());
+        if (this.#parent && includeParent) pluginFiles.concat(await this.#parent.listPlugins());
         return pluginFiles;
     }
 
     async resolvePluginFilename(fileID: string): Promise<string> {
-        if (this.resolverTable[fileID]) return this.resolverTable[fileID];
+        if (this.#resolverTable[fileID]) return this.#resolverTable[fileID];
         if (!fileID) new InvalidPluginError("No fileID specified");
         const pluginFiles = await this.listPlugins(false);
         const resolvedFilename = pluginFiles.find(filename => filename.toLowerCase().includes(fileID.toLowerCase()));
         if (!resolvedFilename) throw new FileNotFoundError(fileID);
-        this.resolverTable[fileID] = resolvedFilename;
+        this.#resolverTable[fileID] = resolvedFilename;
         return resolvedFilename;
     }
 
     async getPlugin(fileID: string, includeParent = true): Promise<Plugin> {
         const resolvedFilename = await this.resolvePluginFilename(fileID);
 
-        if (this.loadedPlugins[resolvedFilename]) {
-            return this.loadedPlugins[resolvedFilename];
-        } else if (this.parent && includeParent) {
-            const plugin = await this.parent.getPlugin(resolvedFilename, includeParent);
+        if (this.#loadedPlugins[resolvedFilename]) {
+            return this.#loadedPlugins[resolvedFilename];
+        } else if (this.#parent && includeParent) {
+            const plugin = await this.#parent.getPlugin(resolvedFilename, includeParent);
             if (plugin) return plugin;
         }
 
         try {
-            decache(resolve(this.pluginDir, resolvedFilename));
-            const plugin = (await import(resolve(this.pluginDir, resolvedFilename))).default || null;
+            decache(resolve(this.#pluginDir, resolvedFilename));
+            const plugin = (await import(resolve(this.#pluginDir, resolvedFilename))).default || null;
             if (plugin && !plugin.__meta)
                 throw new InvalidPluginError(`Plugin ${resolvedFilename} missing __meta block`);
             return plugin;
@@ -437,11 +433,11 @@ export default class PluginLoader3 extends EventEmitter2 {
     getLoadedPlugins(includeParent = true): string[] {
         const plugins: string[] = [];
 
-        for (const plugin of Object.keys(this.loadedPlugins))
+        for (const plugin of Object.keys(this.#loadedPlugins))
             plugins.push(plugin);
 
-        if (this.parent && includeParent)
-            plugins.concat(this.parent.getLoadedPlugins(includeParent));
+        if (this.#parent && includeParent)
+            plugins.concat(this.#parent.getLoadedPlugins(includeParent));
 
         return plugins;
     }
@@ -454,11 +450,11 @@ export default class PluginLoader3 extends EventEmitter2 {
     getStartedPlugins(includeParent = true): string[] {
         const plugins: string[] = [];
 
-        for (const plugin of Object.keys(this.startedPlugins))
+        for (const plugin of Object.keys(this.#startedPlugins))
             plugins.push(plugin);
 
-        if (this.parent && includeParent)
-            plugins.concat(this.parent.getStartedPlugins(includeParent));
+        if (this.#parent && includeParent)
+            plugins.concat(this.#parent.getStartedPlugins(includeParent));
 
         return plugins;
     }
@@ -470,19 +466,19 @@ export default class PluginLoader3 extends EventEmitter2 {
 
     async getInitialPluginState(fileID: string): Promise<("started" | "loaded" | "unloaded")> {
         const resolved = await this.resolvePluginFilename(fileID);
-        return (this.storage.getItem("pluginstate_" + resolved, "started") as string).toLowerCase() as ("started" | "loaded" | "unloaded");
+        return (this.#storage.getItem("pluginstate_" + resolved, "started") as string).toLowerCase() as ("started" | "loaded" | "unloaded");
     }
     async setInitialPluginState(fileID: string, state: ("started" | "loaded" | "unloaded") = "started"): Promise<void> {
         const resolved = await this.resolvePluginFilename(fileID);
-        this.storage.setItem("pluginstate_" + resolved, state);
+        this.#storage.setItem("pluginstate_" + resolved, state);
     }
 
     private async allDependenciesSatisfied(fileID: string, pluginInfo: (MetaInformation | null) = null): Promise<boolean> {
         pluginInfo = pluginInfo || await this.getPluginInfo(fileID);
         if (!pluginInfo) return false;
 
-        if (!semver.satisfies(this.apiVersion, pluginInfo.apiVersion))
-            throw new ApiVersionMismatchError(fileID, this.apiVersion, pluginInfo.apiVersion);
+        if (!semver.satisfies(this.#apiVersion, pluginInfo.apiVersion))
+            throw new ApiVersionMismatchError(fileID, this.#apiVersion, pluginInfo.apiVersion);
 
         const pluginDependencies = pluginInfo.pluginDependencies || {};
         for (const dependencyName in pluginDependencies) {
@@ -525,7 +521,7 @@ export default class PluginLoader3 extends EventEmitter2 {
             // eslint-disable-next-line @typescript-eslint/no-empty-function
             let dependencySatisfiedCallback: (value?: any) => void = () => { };
             const prom: Promise<undefined> = new Promise(res => dependencySatisfiedCallback = res);
-            this.loadingQueue.push({
+            this.#loadingQueue.push({
                 plugin: fileID,
                 callback: dependencySatisfiedCallback
             });
@@ -536,23 +532,23 @@ export default class PluginLoader3 extends EventEmitter2 {
         const pluginInfo = plugin.__meta;
 
         for (const [dependency, state] of Object.entries(pluginInfo.pluginDependencies || {})) {
-            if (!this.dependencyTree[dependency]) this.dependencyTree[dependency] = {};
-            this.dependencyTree[dependency][resolved] = (state as PluginDependency).state || state as ("started" | "loaded") || "started";
+            if (!this.#dependencyTree[dependency]) this.#dependencyTree[dependency] = {};
+            this.#dependencyTree[dependency][resolved] = (state as PluginDependency).state || state as ("started" | "loaded") || "started";
         }
 
         await injectDependencies(pluginInfo.dependencies || {});
 
-        const storage = this.pluginStorages[resolved] = new Storage({
-            path: resolve(this.storageDir, "plugins", parse(resolved).name + ".sqlite3"),
+        const storage = this.#pluginStorages[resolved] = new Storage({
+            path: resolve(this.#storageDir, "plugins", parse(resolved).name + ".sqlite3"),
             metaTable: {
                 Module: pluginInfo.name,
                 Version: pluginInfo.version
             }
         });
 
-        if (typeof plugin.load === "function") await plugin.load(this.api, storage, resolved);
+        if (typeof plugin.load === "function") await plugin.load(this.#api, storage, resolved);
 
-        this.loadedPlugins[resolved] = plugin;
+        this.#loadedPlugins[resolved] = plugin;
         setTimeout(() => {
             this.emit("pluginLoaded", resolved, {
                 parent: false,
@@ -572,10 +568,10 @@ export default class PluginLoader3 extends EventEmitter2 {
 
         if (typeof plugin.unload === "function") await plugin.unload();
 
-        this.pluginStorages[resolved].__destroy();
+        this.#pluginStorages[resolved].__destroy();
 
-        delete this.loadedPlugins[resolved];
-        delete this.pluginStorages[resolved];
+        delete this.#loadedPlugins[resolved];
+        delete this.#pluginStorages[resolved];
 
         setTimeout(() => {
             this.emit("pluginUnloaded", resolved, {
@@ -595,7 +591,7 @@ export default class PluginLoader3 extends EventEmitter2 {
 
         if (typeof plugin.start === "function") await plugin.start();
 
-        this.startedPlugins[resolved] = plugin;
+        this.#startedPlugins[resolved] = plugin;
 
         setTimeout(() => {
             this.emit("pluginStarted", resolved, {
@@ -615,7 +611,7 @@ export default class PluginLoader3 extends EventEmitter2 {
 
         if (typeof plugin.stop === "function") await plugin.stop();
 
-        delete this.startedPlugins[resolved];
+        delete this.#startedPlugins[resolved];
 
         setTimeout(() => {
             this.emit("pluginStopped", resolved, {
@@ -633,7 +629,7 @@ export default class PluginLoader3 extends EventEmitter2 {
         if (isPluginStarted) await this.stopPlugin(resolved);
         if (isPluginLoaded) await this.unloadPlugin(resolved);
 
-        await fs.remove(resolve(this.storageDir, "plugins", parse(resolved).name + ".sqlite3"));
+        await fs.remove(resolve(this.#storageDir, "plugins", parse(resolved).name + ".sqlite3"));
 
         if (isPluginLoaded) await this.loadPlugin(resolved);
         if (isPluginStarted) await this.startPlugin(resolved);
