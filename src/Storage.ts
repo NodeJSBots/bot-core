@@ -113,9 +113,9 @@ export default class Storage {
                 try {
                     return [row.key, JSON.parse(row.value)];
                 } catch (error) {
-                    return [row.key, undefined];
+                    return null;
                 }
-            });
+            }).filter(i => i) as [string, JsonSerializable | undefined][];
         };
         this.#keysFn = () => {
             const rows = this.#entriesFn();
