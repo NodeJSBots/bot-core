@@ -16,6 +16,7 @@ const randomString = Math.random().toString(36).substring(2, 15) + Math.random()
 const randomBoolean = Math.random() < 0.5;
 const randomNull = null;
 const randomArray: number[] = [];
+const randomDefaultValue = Math.floor(Math.random() * 128);
 
 import Storage from "../src/Storage";
 describe(TEST_SUITE, function () {
@@ -113,6 +114,10 @@ describe(TEST_SUITE, function () {
                 randomArray
             });
         });
+        it("Reads a defaultValue in case of an non-existing key", function () {
+            expect(storage.hasItem("this_key_does_not_exist")).to.equal(false);
+            expect(storage.getItem("this_key_does_not_exist", randomDefaultValue)).to.equal(randomDefaultValue);
+        });
         it("Closes and re-opens the database, retaining all previously saved values", function () {
             storage.__destroy();
             storage = new Storage(DB_PATH);
@@ -128,6 +133,16 @@ describe(TEST_SUITE, function () {
                 randomNull,
                 randomArray
             });
+        });
+        it("Returns all saved keys in proper order", function () {
+            expect(storage.keys).to.deep.equal([
+                "random_value_test_number",
+                "random_value_test_string",
+                "random_value_test_boolean",
+                "random_value_test_null",
+                "random_value_test_array",
+                "random_value_test_object"
+            ]);
         });
         it("Closes the Storage", function () {
             expect(() => storage.__destroy()).to.not.throw();
