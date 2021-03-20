@@ -187,6 +187,9 @@ export default class Storage {
     removeItem(keyName: string): void {
         this.#removeFn(keyName);
     }
+    hasItem(keyName: string): boolean {
+        return this.#keysFn().includes(keyName);
+    }
     clear(): void {
         this.#clearFn();
     }
