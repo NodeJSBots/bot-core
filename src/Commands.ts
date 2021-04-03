@@ -38,7 +38,7 @@ type env = {
     readonly [key: string]: string | undefined
 } | ((key: string) => string);
 
-export function split(inputString: string, customEnv: env = {}, replaceNotFoundVariables: false, throwErrorOnUnterminatedString: false): string[] {
+export function split(inputString: string, customEnv: env = {}, replaceNotFoundVariables = false, throwErrorOnUnterminatedString = false): string[] {
     const DOUBLE_BACKSLASHES = "\u0000";
     const ESCAPED_DOUBLE_QUOTES = "\u0001";
     const ESCAPED_SINGLE_QUOTES = "\u0002";
