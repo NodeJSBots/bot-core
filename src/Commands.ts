@@ -33,6 +33,11 @@ export class UnterminatedBacktickError extends UnterminatedStringError {
         super("`", input, lineNr, characterNr);
     }
 }
+export class CommandNotFoundError extends ExtendableError {
+    constructor(command: string) {
+        super(`Command ${command} not found`);
+    }
+}
 
 const nop = () => { /* no-op */ };
 
