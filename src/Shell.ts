@@ -1,7 +1,7 @@
 "use strict";
 
 import repl from "repl";
-import { CommandContainer, CommandNotFoundError, UnterminatedStringError } from "./Commands";
+import CommandContainer, { CommandNotFoundError, UnterminatedStringError } from "./Commands";
 import { Readable, Writable } from "stream";
 import { REPLEval, ReplOptions, REPLServer, REPLWriter } from "repl";
 import { inspect } from "util";

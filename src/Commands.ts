@@ -146,7 +146,7 @@ const commandDescription = new WeakMap();
 const parentContainer = new WeakMap();
 const permissionString = new WeakMap();
 
-export class CommandContainer {
+export default class CommandContainer {
     #hookedCommands: {
         [key: string]: {
             command: Command,
@@ -298,7 +298,7 @@ export class CommandContainer {
     }
 }
 
-class Command extends CommandContainer {
+export class Command extends CommandContainer {
     #callback: ((...args: any[]) => any);
     #syntax: string | null = null;
     constructor() {
