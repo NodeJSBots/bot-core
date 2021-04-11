@@ -1,15 +1,17 @@
 {
-    "name": "extensible-botcore",
+    "name": "@nodejsbots/extensible-botcore",
     "version": "1.0.0",
     "description": "A collection of utilities to write a bot with",
-    "main": "main.js",
+    "main": "dist/main.js",
+    "types": "dist/main.d.ts",
     "scripts": {
         "find-todo": "node utils/todo-finder.js .",
         "mocha": "mocha",
         "lint": "eslint .",
         "build": "rimraf ./dist && tsc",
         "test": "npm run lint && npm run find-todo && npm run mocha",
-        "start": "npm test && npm run build && node main.js"
+        "start": "npm test && npm run build && node main.js",
+        "prepublish": "npm test && npm run build"
     },
     "repository": {
         "type": "git",
@@ -30,6 +32,9 @@
     "bugs": {
         "url": "https://github.com/NodeJSBots/bot-core/issues"
     },
+    "files": [
+        "/dist"
+    ],
     "homepage": "https://github.com/NodeJSBots/bot-core#readme",
     "devDependencies": {
         "@types/better-sqlite3": "^5.4.1",
