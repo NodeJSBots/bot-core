@@ -34,7 +34,8 @@ export default class Shell {
                 cb(null, await commandContainer.resolveAndRun(cmd));
             } catch (error) {
                 if (error instanceof UnterminatedStringError) cb(new repl.Recoverable(error), null);
-                else cb(error, null);
+                else if (error instanceof Error) cb(error, null);
+                else cb(new Error("" + error), null);
             }
         };
 

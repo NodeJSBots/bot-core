@@ -420,8 +420,10 @@ export default class PluginLoader3 extends EventEmitter2 {
         } catch (error) {
             if (error instanceof SyntaxError)
                 throw error;
-            else
+            else if (error instanceof Error)
                 throw new InvalidPluginError("Failed to load plugin '" + resolvedFilename + "': " + error + "\n" + error.stack);
+            else
+                throw new InvalidPluginError("Failed to load plugin '" + resolvedFilename + "': " + error);
         }
     }
 
